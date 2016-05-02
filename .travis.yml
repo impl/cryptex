@@ -1,4 +1,11 @@
 language: elixir
 elixir:
-    - 1.2.4
+  - 1.2.4
+env:
+  - MIX_ENV=test
 sudo: false
+install:
+  - mix deps.get
+script:
+  - mix test --cover
+  - mix coveralls.travis
