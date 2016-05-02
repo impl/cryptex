@@ -48,3 +48,17 @@ defmodule ExCrypto.Hasher do
   end
 
 end
+
+defimpl Collectable, for: ExCrypto.Hasher do
+
+  alias ExCrypto.Hasher
+
+  def into(%Hasher{} = original) do
+    {original, fn
+      hasher, {:cont, data} -> Hasher.update(hasher, data)
+      hasher, :done -> hasher
+      _, :halt -> :ok
+    end}
+  end
+
+end

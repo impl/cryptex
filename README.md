@@ -51,6 +51,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
     ExCrypto.Hasher.digest(:sha256, "test") |> Base.encode16 # => "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08"
     ExCrypto.Hasher.digest(ExCrypto.Hasher.Sha256, "test") |> Base.encode16
     ExCrypto.Hasher.new(:sha256) |> ExCrypto.Hasher.update("te") |> ExCrypto.Hasher.update("st") |> ExCrypto.Hasher.digest |> Base.encode16
+    ["te", "st"] |> Enum.into(ExCrypto.Hasher.new(:sha256)) |> ExCrypto.Hasher.digest |> Base.encode16
 
 ### Calculate an HMAC
 
