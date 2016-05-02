@@ -1,6 +1,8 @@
 # ExCrypto
 
-Elixir cryptographic APIs and routines.
+[![Build Status](https://travis-ci.org/impl/ex_crypto.svg?branch=master)](https://travis-ci.org/impl/ex_crypto)
+
+Cryptographic APIs and routines for Elixir.
 
 ## Supported algorithms
 
