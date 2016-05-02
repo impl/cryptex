@@ -1,6 +1,4 @@
-# ExCrypto
-
-[![Build Status](https://travis-ci.org/impl/ex_crypto.svg?branch=master)](https://travis-ci.org/impl/ex_crypto)
+# ExCrypto [![Build Status](https://travis-ci.org/impl/ex_crypto.svg?branch=master)](https://travis-ci.org/impl/ex_crypto) [![Coverage Status](https://coveralls.io/repos/github/impl/ex_crypto/badge.svg?branch=master)](https://coveralls.io/github/impl/ex_crypto?branch=master)
 
 Cryptographic APIs and routines for Elixir.
 
