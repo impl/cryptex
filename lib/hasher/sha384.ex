@@ -1,0 +1,10 @@
+defmodule ExCrypto.Hasher.Sha384 do
+
+  @block_size_bits 1024
+  @digest_size_bits 384
+
+  use ExCrypto.Hasher.Builtin, algorithm: :sha384,
+    block_size: div(@block_size_bits, 8),
+    digest_size: div(@digest_size_bits, 8)
+
+end
