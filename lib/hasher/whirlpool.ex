@@ -28,9 +28,7 @@ defmodule ExCrypto.Hasher.Whirlpool do
     hash: :array.new(size: div(@digest_bytes, 8), fixed: true, default: 0),
   ]
 
-  def new(_opts) do
-    {:ok, %Whirlpool{}}
-  end
+  def new(_opts), do: %Whirlpool{}
 
   def block_size, do: @block_bytes
 
@@ -42,10 +40,7 @@ defmodule ExCrypto.Hasher.Whirlpool do
     data_bits = bit_size(data)
 
     n_bit_length = update_bit_length(bit_length, data_bits)
-    {:ok, update_buffer(%Whirlpool{w | bit_length: n_bit_length |> Enum.reverse}, data, data_bits)}
-  end
-  def update(_w, _data) do
-    {:error, ArgumentError.exception("invalid data")}
+    update_buffer(%Whirlpool{w | bit_length: n_bit_length |> Enum.reverse}, data, data_bits)
   end
 
   defp update_bit_length(bit_length, data_bits) do
@@ -118,7 +113,7 @@ defmodule ExCrypto.Hasher.Whirlpool do
     n_w2 = append_bit_lengths(%Whirlpool{n_w | buffer_pos: @block_bytes - @length_bytes})
     n_w3 = transform(n_w2)
 
-    {:ok, calculate_digest(n_w3)}
+    calculate_digest(n_w3)
   end
 
   defp try_final_pad_upper(%Whirlpool{buffer: buffer, buffer_pos: buffer_pos} = w) when buffer_pos > @block_bytes - @length_bytes do

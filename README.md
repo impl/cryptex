@@ -48,16 +48,16 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
 
 ### Calculate a SHA-256 hash
 
-    ExCrypto.Hasher.digest!(:sha256, "test") |> Base.encode16 # => "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08"
-    ExCrypto.Hasher.digest!(ExCrypto.Hasher.Sha256, "test") |> Base.encode16
-    ExCrypto.Hasher.new!(:sha256) |> ExCrypto.Hasher.update!("te") |> ExCrypto.Hasher.update!("st") |> ExCrypto.Hasher.digest! |> Base.encode16
+    ExCrypto.Hasher.digest(:sha256, "test") |> Base.encode16 # => "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08"
+    ExCrypto.Hasher.digest(ExCrypto.Hasher.Sha256, "test") |> Base.encode16
+    ExCrypto.Hasher.new(:sha256) |> ExCrypto.Hasher.update("te") |> ExCrypto.Hasher.update("st") |> ExCrypto.Hasher.digest |> Base.encode16
 
 ### Calculate an HMAC
 
-    ExCrypto.Mac.Hmac.hmac!(:sha256, "key", "test") |> Base.encode16 # => "02AFB56304902C656FCB737CDD03DE6205BB6D401DA2812EFD9B2D36A08AF159"
-    ExCrypto.Mac.Hmac.new!(:sha256) |> ExCrypto.Mac.Hmac.hmac!("key", "test") |> Base.encode16
+    ExCrypto.Mac.Hmac.hmac(:sha256, "key", "test") |> Base.encode16 # => "02AFB56304902C656FCB737CDD03DE6205BB6D401DA2812EFD9B2D36A08AF159"
+    ExCrypto.Mac.Hmac.new(:sha256) |> ExCrypto.Mac.Hmac.hmac("key", "test") |> Base.encode16
 
 ### Derive a key using PBKDF2 and encode with MCF
 
-    ExCrypto.Kdf.Pbkdf2.new!(ExCrypto.Mac.Hmac.new!(:sha512), "key") |> ExCrypto.Mcf.encode!
+    ExCrypto.Kdf.Pbkdf2.new(ExCrypto.Mac.Hmac.new(:sha512), "key") |> ExCrypto.Mcf.encode
       # => "$pbkdf2-sha512$160000$PL6NBXxB1q4xR/NA66khgQ$FU.nYukhtdnPuamHO3nRrRby4irh2Rje6bDyCzRiKBdvuCr5InY1jdNbyUMkYHXZUs5phIp0aVcXyc21drs0ew"

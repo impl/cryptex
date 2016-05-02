@@ -2,15 +2,9 @@ defmodule ExCrypto.Mcf do
 
   alias ExCrypto.Mcf.Encoder
 
-  def encode!(kdf) do
-    {:ok, string} = encode(kdf)
-    string
-  end
   def encode(kdf) do
-    case Encoder.encode(kdf) do
-      {:ok, name, data} -> {:ok, format(name, data)}
-      {:error, _} = e -> e
-    end
+    {name, data} = Encoder.encode(kdf)
+    format(name, data)
   end
 
   defp format(name, data), do: "$#{name}$#{data}"

@@ -4,14 +4,11 @@ defmodule ExCrypto.Hasher do
 
   @type t :: module
 
-  @callback new(opts :: Keyword.t)
-    :: {:ok, state :: any} | {:error, Exception.t}
+  @callback new(opts :: Keyword.t) :: any
 
-  @callback update(state :: any, data :: binary)
-    :: {:ok, new_state :: any} | {:error, Exception.t}
+  @callback update(state :: any, data :: binary) :: any
 
-  @callback digest(state :: any)
-    :: {:ok, digest :: binary} | {:error, Exception.t}
+  @callback digest(state :: any) :: binary
 
   @callback block_size() :: integer
   @callback digest_size() :: integer
@@ -20,60 +17,21 @@ defmodule ExCrypto.Hasher do
 
   defstruct module: nil, state: nil
 
-  def new!(module, opts \\ []) do
-    case new(module, opts) do
-      {:ok, hasher} -> hasher
-      {:error, error} -> raise error
-    end
-  end
-
   def new(module, opts \\ []) do
     resolved_module = resolve_module(module)
-
-    case resolved_module.new(opts) do
-      {:ok, state} -> {:ok, %Hasher{module: resolved_module, state: state}}
-      {:error, _} = e -> e
-    end
-  end
-
-  def update!(%Hasher{} = hasher, data) do
-    case update(hasher, data) do
-      {:ok, new_hasher} -> new_hasher
-      {:error, error} -> raise error
-    end
+    %Hasher{module: resolved_module, state: resolved_module.new(opts)}
   end
 
   def update(%Hasher{module: module, state: state} = hasher, data) do
-    case module.update(state, data) do
-      {:ok, new_state} -> {:ok, %Hasher{hasher | state: new_state}}
-      {:error, _} = e -> e
-    end
-  end
-
-  def digest!(%Hasher{} = hasher) do
-    case digest(hasher) do
-      {:ok, result} -> result
-      {:error, error} -> raise error
-    end
+    %Hasher{hasher | state: module.update(state, data)}
   end
 
   def digest(%Hasher{module: module, state: state}) do
     module.digest(state)
   end
 
-  def digest!(module, data) do
-    new!(module) |> update!(data) |> digest!
-  end
-
   def digest(module, data) do
-    case new(module) do
-      {:ok, hasher} ->
-        case update(hasher, data) do
-          {:ok, new_hasher} -> digest(new_hasher)
-          {:error, _} = e -> e
-        end
-      {:error, _} = e -> e
-    end
+    new(module) |> update(data) |> digest
   end
 
   def block_size(module), do: resolve_module(module).block_size

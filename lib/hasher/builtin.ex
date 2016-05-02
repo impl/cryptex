@@ -5,25 +5,9 @@ defmodule ExCrypto.Hasher.Builtin do
 
       @behaviour ExCrypto.Hasher
 
-      def new(_opts) do
-        {:ok, :crypto.hash_init(unquote(algorithm))}
-      end
-
-      def update(context, data) do
-        try do
-          {:ok, :crypto.hash_update(context, data)}
-        catch
-          error -> {:error, error}
-        end
-      end
-
-      def digest(context) do
-        try do
-          {:ok, :crypto.hash_final(context)}
-        catch
-          error -> {:error, error}
-        end
-      end
+      def new(_opts), do: :crypto.hash_init(unquote(algorithm))
+      defdelegate update(context, data), to: :crypto, as: :hash_update
+      defdelegate digest(context), to: :crypto, as: :hash_final
 
       def block_size, do: unquote(block_size)
       def digest_size, do: unquote(digest_size)
