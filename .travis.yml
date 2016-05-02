@@ -5,6 +5,7 @@ env:
   - MIX_ENV=test
 sudo: false
 install:
+  - mix local.hex --force
   - mix deps.get
 script:
   - mix test --cover
