@@ -1,6 +1,6 @@
-defmodule ExCrypto.Kdf.Pbkdf2.Result do
+defmodule Cryptex.Kdf.Pbkdf2.Result do
 
-  alias ExCrypto.Kdf.Pbkdf2.Result
+  alias Cryptex.Kdf.Pbkdf2.Result
 
   defstruct prf: nil, rounds: nil, salt: nil, digest: nil
 
@@ -15,15 +15,15 @@ defmodule ExCrypto.Kdf.Pbkdf2.Result do
 
   defmodule McfAlphabet do
 
-    use ExCrypto.Utils.Base64, alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./', padding: false
+    use Cryptex.Utils.Base64, alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./', padding: false
 
   end
 
-  defimpl ExCrypto.Mcf.Encoder do
+  defimpl Cryptex.Mcf.Encoder do
 
-    alias ExCrypto.Hasher
-    alias ExCrypto.Kdf.Pbkdf2.Result
-    alias ExCrypto.Mac.Hmac
+    alias Cryptex.Hasher
+    alias Cryptex.Kdf.Pbkdf2.Result
+    alias Cryptex.Mac.Hmac
 
     def encode(%Result{prf: %Hmac{} = prf, rounds: rounds, salt: salt, digest: digest}) do
       {"pbkdf2-#{Hmac.hasher(prf) |> Hasher.name}", "#{rounds}$#{Result.McfAlphabet.encode(salt)}$#{Result.McfAlphabet.encode(digest)}"}

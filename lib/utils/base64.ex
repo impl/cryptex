@@ -1,4 +1,4 @@
-defmodule ExCrypto.Utils.Base64 do
+defmodule Cryptex.Utils.Base64 do
 
   use Bitwise
 
@@ -23,12 +23,12 @@ defmodule ExCrypto.Utils.Base64 do
 
       def encode(data, opts \\ []) do
         opts = Keyword.put_new(opts, :padding, unquote(default_padding))
-        ExCrypto.Utils.Base64.encode(data, &encode_char/1, opts)
+        Cryptex.Utils.Base64.encode(data, &encode_char/1, opts)
       end
 
       def decode!(data, opts \\ []) do
         opts = Keyword.put_new(opts, :padding, unquote(default_padding))
-        ExCrypto.Utils.Base64.decode!(data, &decode_char/1, opts)
+        Cryptex.Utils.Base64.decode!(data, &decode_char/1, opts)
       end
 
     end

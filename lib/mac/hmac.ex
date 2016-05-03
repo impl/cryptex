@@ -1,7 +1,7 @@
-defmodule ExCrypto.Mac.Hmac do
+defmodule Cryptex.Mac.Hmac do
 
-  alias ExCrypto.Hasher
-  alias ExCrypto.Mac.Hmac
+  alias Cryptex.Hasher
+  alias Cryptex.Mac.Hmac
 
   use Bitwise
 

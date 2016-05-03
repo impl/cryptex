@@ -1,9 +1,9 @@
-defmodule ExCrypto.Mixfile do
+defmodule Cryptex.Mixfile do
   use Mix.Project
 
   def project do
     [
-      app: :ex_crypto,
+      app: :cryptex,
       version: "0.0.1",
       elixir: "~> 1.2",
       build_embedded: Mix.env == :prod,

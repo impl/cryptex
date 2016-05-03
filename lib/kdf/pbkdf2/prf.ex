@@ -1,13 +1,13 @@
-defprotocol ExCrypto.Kdf.Pbkdf2.Prf do
+defprotocol Cryptex.Kdf.Pbkdf2.Prf do
 
   def apply(f, secret, salt)
   def digest_size(f)
 
 end
 
-defimpl ExCrypto.Kdf.Pbkdf2.Prf, for: ExCrypto.Mac.Hmac do
+defimpl Cryptex.Kdf.Pbkdf2.Prf, for: Cryptex.Mac.Hmac do
 
-  alias ExCrypto.Mac.Hmac
+  alias Cryptex.Mac.Hmac
 
   defdelegate apply(f, secret, salt), to: Hmac, as: :generate
   defdelegate digest_size(f), to: Hmac

@@ -1,4 +1,4 @@
-defmodule ExCrypto.Hasher.Algorithm do
+defmodule Cryptex.Hasher.Algorithm do
 
   @type t :: module
 

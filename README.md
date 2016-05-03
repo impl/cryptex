@@ -1,4 +1,4 @@
-# ExCrypto [![Build Status](https://travis-ci.org/impl/ex_crypto.svg?branch=master)](https://travis-ci.org/impl/ex_crypto) [![Coverage Status](https://coveralls.io/repos/github/impl/ex_crypto/badge.svg?branch=master)](https://coveralls.io/github/impl/ex_crypto?branch=master)
+# Cryptex [![Build Status](https://travis-ci.org/impl/cryptex.svg?branch=master)](https://travis-ci.org/impl/cryptex) [![Coverage Status](https://coveralls.io/repos/github/impl/cryptex/badge.svg?branch=master)](https://coveralls.io/github/impl/cryptex?branch=master)
 
 Cryptographic APIs and routines for Elixir.
 
@@ -6,59 +6,77 @@ Cryptographic APIs and routines for Elixir.
 
 ### Cryptographic hashes
 
-* MD4 (`ExCrypto.Hasher.MD4`)
-* MD5 (`ExCrypto.Hasher.MD5`)
-* RIPEMD-160 (`ExCrypto.Hasher.Ripemd160`)
-* SHA-1 (`ExCrypto.Hasher.Sha1`)
-* SHA-224 (`ExCrypto.Hasher.Sha224`)
-* SHA-256 (`ExCrypto.Hasher.Sha256`)
-* SHA-384 (`ExCrypto.Hasher.Sha384`)
-* SHA-512 (`ExCrypto.Hasher.Sha512`)
-* Whirlpool (`ExCrypto.Hasher.Whirlpool`)
+* MD4 (`Cryptex.Hasher.MD4`)
+* MD5 (`Cryptex.Hasher.MD5`)
+* RIPEMD-160 (`Cryptex.Hasher.Ripemd160`)
+* SHA-1 (`Cryptex.Hasher.Sha1`)
+* SHA-224 (`Cryptex.Hasher.Sha224`)
+* SHA-256 (`Cryptex.Hasher.Sha256`)
+* SHA-384 (`Cryptex.Hasher.Sha384`)
+* SHA-512 (`Cryptex.Hasher.Sha512`)
+* Whirlpool (`Cryptex.Hasher.Whirlpool`)
 
 ### Message authentication codes
 
-* HMAC (`ExCrypto.Mac.Hmac`)
+* HMAC (`Cryptex.Mac.Hmac`)
 
 ### Key derivation functions
 
-* PBKDF2 (`ExCrypto.Kdf.Pbkdf2`)
+* PBKDF2 (`Cryptex.Kdf.Pbkdf2`)
 
 ### Utilities
 
-* Message crypt format encoding (`ExCrypto.Mcf`)
+* Message crypt format encoding (`Cryptex.Mcf`)
 
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed as:
 
-  1. Add ex_crypto to your list of dependencies in `mix.exs`:
+  1. Add cryptex to your list of dependencies in `mix.exs`:
 
         def deps do
-          [{:ex_crypto, "~> 0.0.1"}]
+          [{:cryptex, "~> 0.0.1"}]
         end
 
-  2. Ensure ex_crypto is started before your application:
+  2. Ensure cryptex is started before your application:
 
         def application do
-          [applications: [:ex_crypto]]
+          [applications: [:cryptex]]
         end
 
 ## Examples
 
 ### Calculate a SHA-256 hash
 
-    ExCrypto.Hasher.digest(:sha256, "test") |> Base.encode16 # => "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08"
-    ExCrypto.Hasher.digest(ExCrypto.Hasher.Sha256, "test") |> Base.encode16
-    ExCrypto.Hasher.new(:sha256) |> ExCrypto.Hasher.update("te") |> ExCrypto.Hasher.update("st") |> ExCrypto.Hasher.digest |> Base.encode16
-    ["te", "st"] |> Enum.into(ExCrypto.Hasher.new(:sha256)) |> ExCrypto.Hasher.digest |> Base.encode16
+    Cryptex.Hasher.digest(:sha256, "test") |> Base.encode16 # => "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08"
+
+    Cryptex.Hasher.digest(Cryptex.Hasher.Algorithm.Sha256, "test") |> Base.encode16
+
+    Cryptex.Hasher.new_state(:sha256)
+    |> Cryptex.Hasher.State.update("te")
+    |> Cryptex.Hasher.State.update("st")
+    |> Cryptex.Hasher.State.digest |> Base.encode16
+
+    ["te", "st"] |> Enum.into(Cryptex.Hasher.new(:sha256)) |> Base.encode16
+
+### Calculate the SHA-512 hash of a file
+
+    File.stream!("mix.lock")
+    |> Enum.into(Cryptex.Hasher.new(:sha512)) |> Base.encode16
+      # => "BAC0FB5040C777E4125F413A5F0B02D6E8116E9ABDEF331C861F6AF5F7536AFB2B632D3C6FCB379555F32C8DAE735E15C6D1EB2719C0AD6B2526B7073B5D525A"
 
 ### Calculate an HMAC
 
-    ExCrypto.Mac.Hmac.hmac(:sha256, "key", "test") |> Base.encode16 # => "02AFB56304902C656FCB737CDD03DE6205BB6D401DA2812EFD9B2D36A08AF159"
-    ExCrypto.Mac.Hmac.new(:sha256) |> ExCrypto.Mac.Hmac.hmac("key", "test") |> Base.encode16
+    Cryptex.Mac.Hmac.generate(Cryptex.Hasher.new(:sha256), "key", "test") |> Base.encode16 # => "02AFB56304902C656FCB737CDD03DE6205BB6D401DA2812EFD9B2D36A08AF159"
+
+    Cryptex.Mac.Hmac.new(:sha256)
+    |> Cryptex.Mac.Hmac.generate("key", "test") |> Base.encode16
 
 ### Derive a key using PBKDF2 and encode with MCF
 
-    ExCrypto.Kdf.Pbkdf2.new(ExCrypto.Mac.Hmac.new(:sha512), "key") |> ExCrypto.Mcf.encode
-      # => "$pbkdf2-sha512$160000$PL6NBXxB1q4xR/NA66khgQ$FU.nYukhtdnPuamHO3nRrRby4irh2Rje6bDyCzRiKBdvuCr5InY1jdNbyUMkYHXZUs5phIp0aVcXyc21drs0ew"
+    Cryptex.Kdf.Pbkdf2.derive(Cryptex.Mac.Hmac.new(:sha512), "secret") |> Cryptex.Mcf.encode
+      # => "$pbkdf2-sha512$160000$DM31Hc6BkHrbuVi0muAcFQ$cCAm0XJMQ4Go81UiXfO8/9HZHEKWTDTbL37gm9KNA9xeWv1Zi12EmtMx6vxBJD5zECKIx63lVAckGBQIyIKgaA"
+
+    Cryptex.Kdf.Pbkdf2.new(Cryptex.Mac.Hmac.new(:sha512))
+    |> Cryptex.Kdf.Pbkdf2.derive("secret", "DM31Hc6BkHrbuVi0muAcFQ" |> Cryptex.Kdf.Pbkdf2.Result.McfAlphabet.decode!)
+    |> Cryptex.Mcf.encode

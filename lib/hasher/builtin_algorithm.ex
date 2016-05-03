@@ -1,9 +1,9 @@
-defmodule ExCrypto.Hasher.BuiltinAlgorithm do
+defmodule Cryptex.Hasher.BuiltinAlgorithm do
 
   defmacro __using__(algorithm: algorithm, block_size: block_size, digest_size: digest_size) do
     quote location: :keep do
 
-      @behaviour ExCrypto.Hasher.Algorithm
+      @behaviour Cryptex.Hasher.Algorithm
 
       @type t :: any
 

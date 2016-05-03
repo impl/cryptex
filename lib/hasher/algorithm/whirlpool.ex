@@ -6,12 +6,12 @@
 # Copyright 2012 Jimmy Zelinskie. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-defmodule ExCrypto.Hasher.Algorithm.Whirlpool do
+defmodule Cryptex.Hasher.Algorithm.Whirlpool do
 
-  alias ExCrypto.Hasher.Algorithm.Whirlpool
+  alias Cryptex.Hasher.Algorithm.Whirlpool
   use Bitwise
 
-  @behaviour ExCrypto.Hasher.Algorithm
+  @behaviour Cryptex.Hasher.Algorithm
 
   @length_bytes 32
 

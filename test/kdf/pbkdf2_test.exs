@@ -1,9 +1,9 @@
-defmodule ExCrypto.Kdf.Pbkdf2Test do
+defmodule Cryptex.Kdf.Pbkdf2Test do
 
   use ExUnit.Case
-  alias ExCrypto.Kdf.Pbkdf2
-  alias ExCrypto.Kdf.Pbkdf2.Result
-  alias ExCrypto.Mac.Hmac
+  alias Cryptex.Kdf.Pbkdf2
+  alias Cryptex.Kdf.Pbkdf2.Result
+  alias Cryptex.Mac.Hmac
 
   @golden_comeonin [
     {"passDATAb00AB7YxDTT", "saltKEYbcTcXHCBxtjD", 100_000,

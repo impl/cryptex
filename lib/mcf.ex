@@ -1,6 +1,6 @@
-defmodule ExCrypto.Mcf do
+defmodule Cryptex.Mcf do
 
-  alias ExCrypto.Mcf.Encoder
+  alias Cryptex.Mcf.Encoder
 
   def encode(kdf) do
     {name, data} = Encoder.encode(kdf)

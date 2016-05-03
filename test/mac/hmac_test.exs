@@ -1,8 +1,8 @@
-defmodule ExCrypto.Mac.HmacTest do
+defmodule Cryptex.Mac.HmacTest do
 
   use ExUnit.Case
-  alias ExCrypto.Hasher
-  alias ExCrypto.Mac.Hmac
+  alias Cryptex.Hasher
+  alias Cryptex.Mac.Hmac
 
   @golden_nist_test_vectors [
     {:sha256, "0BB4127D89D9073EA425C303ADC3F9DB39E40ADAC23EA61FBA8B6E251D79390F", "C18BC28D496BEEDB25CA42D1B217BC81891D4C2BBB35380E5BB9BF7E3DBBFD37FEF70EF14407763447D6C06E915766430277F124165061236B9FCF057D785199B4381E49A2BCF3EF85D0", "28B18B862CE9541ED6DAF81199F9A331133B0EA3E48FF486C1ACC6D5C40E9F8F063B7A15704BA3D3CEA76B222511206D47E53C93A49EDD8D639B7551B224C3F65AA802189648607E259AB1FA9EA665910435B7DC9A4C28AEF8F32CF85F3A23E94A7E8A5945E9736702383261AAC15AE571B4E8466DA1BD31A83A5291745BA7AF"},
@@ -64,7 +64,7 @@ defmodule ExCrypto.Mac.HmacTest do
   end
 
   test "HMAC calculation works with atoms for hasher" do
-    assert Hmac.generate(:sha256, "key", "test") == Hmac.generate(ExCrypto.Hasher.Algorithm.Sha256, "key", "test")
+    assert Hmac.generate(:sha256, "key", "test") == Hmac.generate(Cryptex.Hasher.Algorithm.Sha256, "key", "test")
   end
 
   test "HMAC calculation works with enumerables" do

@@ -1,7 +1,7 @@
-defmodule ExCrypto.Hasher.State do
+defmodule Cryptex.Hasher.State do
 
-  alias ExCrypto.Hasher.Algorithm
-  alias ExCrypto.Hasher.State
+  alias Cryptex.Hasher.Algorithm
+  alias Cryptex.Hasher.State
 
   @type digestable :: binary | Stream.t | Enum.t
 
@@ -24,7 +24,7 @@ defmodule ExCrypto.Hasher.State do
 
   defimpl Collectable do
 
-    alias ExCrypto.Hasher.State
+    alias Cryptex.Hasher.State
 
     def into(%State{} = original) do
       {original, fn

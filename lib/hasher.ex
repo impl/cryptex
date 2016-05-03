@@ -1,9 +1,9 @@
-defmodule ExCrypto.Hasher do
+defmodule Cryptex.Hasher do
 
-  alias ExCrypto.Hasher
-  alias ExCrypto.Hasher.State
+  alias Cryptex.Hasher
+  alias Cryptex.Hasher.State
 
-  @type algorithm :: ExCrypto.Hasher.Algorithm.t | atom
+  @type algorithm :: Cryptex.Hasher.Algorithm.t | atom
 
   defstruct module: nil, opts: []
   @opaque t :: %Hasher{}
@@ -24,14 +24,13 @@ defmodule ExCrypto.Hasher do
     new(module, opts) |> new_state
   end
 
-  @spec digest(t, State.digestable) :: binary
+  @spec digest(t | algorithm, State.digestable) :: binary
+  def digest(hasher_or_module, data)
   def digest(%Hasher{module: module, opts: opts}, data) do
     State.new(module, opts) |> State.update(data) |> State.digest
   end
-
-  @spec digest(algorithm, State.digestable) :: binary
-  def digest(algorithm, data) do
-    new(algorithm) |> digest(data)
+  def digest(module, data) do
+    new(module) |> digest(data)
   end
 
   @spec block_size(t) :: integer

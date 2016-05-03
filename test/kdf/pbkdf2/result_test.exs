@@ -1,10 +1,10 @@
-defmodule ExCrypto.Kdf.Pbkdf2.ResultTest do
+defmodule Cryptex.Kdf.Pbkdf2.ResultTest do
 
   use ExUnit.Case
-  alias ExCrypto.Kdf.Pbkdf2
-  alias ExCrypto.Kdf.Pbkdf2.Result
-  alias ExCrypto.Mac.Hmac
-  alias ExCrypto.Mcf
+  alias Cryptex.Kdf.Pbkdf2
+  alias Cryptex.Kdf.Pbkdf2.Result
+  alias Cryptex.Mac.Hmac
+  alias Cryptex.Mcf
 
   test "functions return values from computed key" do
     prf = Hmac.new(:sha512)

@@ -5,11 +5,11 @@
 #
 # Released under a BSD-style license. For more information, see the included LICENSE file.
 
-defmodule ExCrypto.Kdf.Pbkdf2 do
+defmodule Cryptex.Kdf.Pbkdf2 do
 
-  alias ExCrypto.Kdf.Pbkdf2
-  alias ExCrypto.Kdf.Pbkdf2.Prf
-  alias ExCrypto.Kdf.Pbkdf2.Result
+  alias Cryptex.Kdf.Pbkdf2
+  alias Cryptex.Kdf.Pbkdf2.Prf
+  alias Cryptex.Kdf.Pbkdf2.Result
 
   @default_rounds 160_000
   @default_salt_size 16

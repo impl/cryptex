@@ -1,12 +1,12 @@
-defmodule ExCrypto.HasherTest do
+defmodule Cryptex.HasherTest do
 
   use ExUnit.Case
-  alias ExCrypto.Hasher
+  alias Cryptex.Hasher
 
   @provided [:md4, :md5, :ripemd160, :sha1, :sha224, :sha256, :sha384, :sha512, :whirlpool]
 
   test "atoms are resolved to modules" do
-    assert Hasher.new(:sha256) == Hasher.new(ExCrypto.Hasher.Algorithm.Sha256)
+    assert Hasher.new(:sha256) == Hasher.new(Cryptex.Hasher.Algorithm.Sha256)
   end
 
   test "digest sizes are correct" do
