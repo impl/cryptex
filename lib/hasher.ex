@@ -1,64 +1,65 @@
 defmodule ExCrypto.Hasher do
 
   alias ExCrypto.Hasher
+  alias ExCrypto.Hasher.State
 
-  @type t :: module
+  @type algorithm :: ExCrypto.Hasher.Algorithm.t | atom
 
-  @callback new(opts :: Keyword.t) :: any
+  defstruct module: nil, opts: []
+  @opaque t :: %Hasher{}
 
-  @callback update(state :: any, data :: binary) :: any
-
-  @callback digest(state :: any) :: binary
-
-  @callback block_size() :: integer
-  @callback digest_size() :: integer
-
-  @callback name() :: String.t
-
-  defstruct module: nil, state: nil
-
+  @spec new(algorithm, Keyword.t) :: t
   def new(module, opts \\ []) do
     resolved_module = resolve_module(module)
-    %Hasher{module: resolved_module, state: resolved_module.new(opts)}
+    %Hasher{module: resolved_module, opts: opts}
   end
 
-  def update(%Hasher{module: module, state: state} = hasher, data) do
-    %Hasher{hasher | state: module.update(state, data)}
+  @spec new_state(t) :: State.t
+  def new_state(%Hasher{module: module, opts: opts}) do
+    State.new(module, opts)
   end
 
-  def digest(%Hasher{module: module, state: state}) do
-    module.digest(state)
+  @spec new_state(algorithm, Keyword.t) :: State.t
+  def new_state(module, opts \\ []) do
+    new(module, opts) |> new_state
   end
 
-  def digest(module, data) do
-    new(module) |> update(data) |> digest
+  @spec digest(t, State.digestable) :: binary
+  def digest(%Hasher{module: module, opts: opts}, data) do
+    State.new(module, opts) |> State.update(data) |> State.digest
   end
 
-  def block_size(module), do: resolve_module(module).block_size
+  @spec digest(algorithm, State.digestable) :: binary
+  def digest(algorithm, data) do
+    new(algorithm) |> digest(data)
+  end
 
-  def digest_size(module), do: resolve_module(module).digest_size
+  @spec block_size(t) :: integer
+  def block_size(%Hasher{module: module}), do: module.block_size
 
-  def name(module), do: resolve_module(module).name
+  @spec digest_size(t) :: integer
+  def digest_size(%Hasher{module: module}), do: module.digest_size
+
+  @spec name(t) :: String.t
+  def name(%Hasher{module: module}), do: module.name
 
   defp resolve_module(module) do
     case Atom.to_string(module) do
       "Elixir." <> _ -> module
-      reference -> Module.concat(__MODULE__, String.capitalize(reference))
+      reference -> Module.concat(__MODULE__.Algorithm, Macro.camelize(reference))
     end
   end
 
-end
+  defimpl Collectable do
 
-defimpl Collectable, for: ExCrypto.Hasher do
+    def into(%Hasher{} = original) do
+      {Hasher.new_state(original), fn
+        state, {:cont, data} -> State.update(state, data)
+        state, :done -> State.digest(state)
+        _, :halt -> :ok
+      end}
+    end
 
-  alias ExCrypto.Hasher
-
-  def into(%Hasher{} = original) do
-    {original, fn
-      hasher, {:cont, data} -> Hasher.update(hasher, data)
-      hasher, :done -> hasher
-      _, :halt -> :ok
-    end}
   end
 
 end

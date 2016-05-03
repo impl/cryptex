@@ -6,17 +6,18 @@
 # Copyright 2012 Jimmy Zelinskie. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-defmodule ExCrypto.Hasher.Whirlpool do
+defmodule ExCrypto.Hasher.Algorithm.Whirlpool do
 
-  alias ExCrypto.Hasher.Whirlpool
+  alias ExCrypto.Hasher.Algorithm.Whirlpool
   use Bitwise
 
-  @behaviour ExCrypto.Hasher
+  @behaviour ExCrypto.Hasher.Algorithm
 
   @length_bytes 32
 
   @digest_bytes 64
   @digest_bits @digest_bytes * 8
+  @digest_bits_per_element div(@digest_bits, 8)
 
   @block_bytes 64
 
@@ -25,22 +26,28 @@ defmodule ExCrypto.Hasher.Whirlpool do
     buffer: :array.new(size: @block_bytes, fixed: true, default: 0),
     buffer_bits: 0,
     buffer_pos: 0,
-    hash: :array.new(size: div(@digest_bytes, 8), fixed: true, default: 0),
+    hash: 1..div(@digest_bytes, 8) |> Enum.map(fn _ -> 0 end),
   ]
+  @opaque t :: %Whirlpool{}
 
+  @spec new(Keyword.t) :: t
   def new(_opts), do: %Whirlpool{}
 
+  @spec block_size() :: integer
   def block_size, do: @block_bytes
 
+  @spec digest_size() :: integer
   def digest_size, do: @digest_bytes
 
+  @spec name() :: String.t
   def name, do: "whirlpool"
 
+  @spec update(t, binary) :: t
   def update(%Whirlpool{bit_length: bit_length} = w, data) when is_binary(data) do
     data_bits = bit_size(data)
 
     n_bit_length = update_bit_length(bit_length, data_bits)
-    update_buffer(%Whirlpool{w | bit_length: n_bit_length |> Enum.reverse}, data, data_bits)
+    update_buffer(%Whirlpool{w | bit_length: n_bit_length}, data, data_bits)
   end
 
   defp update_bit_length(bit_length, data_bits) do
@@ -54,7 +61,7 @@ defmodule ExCrypto.Hasher.Whirlpool do
     update_bit_length([(n_carry &&& 0xff) | acc], bit_length, n_carry >>> 8, value >>> 8)
   end
   defp update_bit_length(acc, rest, carry, value) do
-    update_bit_length(acc, [], carry, value) |> Enum.concat(rest)
+    update_bit_length(acc, [], carry, value) ++ rest
   end
 
   defp update_buffer(%Whirlpool{buffer_bits: buffer_bits} = w, data, data_bits) do
@@ -105,15 +112,15 @@ defmodule ExCrypto.Hasher.Whirlpool do
     %Whirlpool{n_w | buffer: n_buffer, buffer_bits: n_buffer_bits2}
   end
 
+  @spec digest(t) :: binary
   def digest(%Whirlpool{buffer: buffer, buffer_bits: buffer_bits, buffer_pos: buffer_pos} = w) do
     n_buffer = :array.set(buffer_pos, :array.get(buffer_pos, buffer) ||| (0x80 >>> (buffer_bits &&& 7)), buffer)
     n_buffer_pos = buffer_pos + 1
 
     n_w = %Whirlpool{w | buffer: n_buffer, buffer_pos: n_buffer_pos} |> try_final_pad_upper |> try_final_pad_lower
-    n_w2 = append_bit_lengths(%Whirlpool{n_w | buffer_pos: @block_bytes - @length_bytes})
-    n_w3 = transform(n_w2)
+    n_w2 = append_bit_length(%Whirlpool{n_w | buffer_pos: @block_bytes - @length_bytes})
 
-    calculate_digest(n_w3)
+    transform(n_w2).hash |> Enum.map(&(<<&1 :: big-integer-size(@digest_bits_per_element)>>)) |> IO.iodata_to_binary
   end
 
   defp try_final_pad_upper(%Whirlpool{buffer: buffer, buffer_pos: buffer_pos} = w) when buffer_pos > @block_bytes - @length_bytes do
@@ -131,33 +138,22 @@ defmodule ExCrypto.Hasher.Whirlpool do
   end
   defp try_final_pad_lower(%Whirlpool{} = w), do: w
 
-  defp append_bit_lengths(%Whirlpool{bit_length: bit_length} = w) do
-    append_bit_lengths(w, 0, bit_length)
+  defp append_bit_length(%Whirlpool{bit_length: bit_length} = w) do
+    append_bit_length(w, @length_bytes - 1, bit_length)
   end
-  defp append_bit_lengths(%Whirlpool{buffer: buffer, buffer_pos: buffer_pos} = w, bit_length_pos, [bit_length | rest]) do
+  defp append_bit_length(%Whirlpool{buffer: buffer, buffer_pos: buffer_pos} = w, bit_length_pos, [bit_length | rest]) do
     n_buffer = :array.set(buffer_pos + bit_length_pos, bit_length, buffer)
-    append_bit_lengths(%Whirlpool{w | buffer: n_buffer}, bit_length_pos + 1, rest)
+    append_bit_length(%Whirlpool{w | buffer: n_buffer}, bit_length_pos - 1, rest)
   end
-  defp append_bit_lengths(%Whirlpool{} = w, _, []), do: w
+  defp append_bit_length(%Whirlpool{} = w, _, []), do: w
 
-  defp calculate_digest(%Whirlpool{} = w) do
-    calculate_digest(w, [], div(@digest_bytes, 8))
-  end
-  defp calculate_digest(%Whirlpool{}, list, 0) do
-    list |> :erlang.list_to_binary
-  end
-  defp calculate_digest(%Whirlpool{hash: hash} = w, list, count) do
-    i = :array.get(count - 1, hash)
-
-    n_list = [
-      (i >>> 56) &&& 0xff, (i >>> 48) &&& 0xff, (i >>> 40) &&& 0xff, (i >>> 32) &&& 0xff,
-      (i >>> 24) &&& 0xff, (i >>> 16) &&& 0xff, (i >>>  8) &&& 0xff, (i >>>  0) &&& 0xff | list
-    ]
-
-    calculate_digest(w, n_list, count - 1)
+  defp try_transform(%Whirlpool{buffer_bits: buffer_bits} = w) when buffer_bits != @digest_bits, do: w
+  defp try_transform(%Whirlpool{} = w) do
+    n_w = transform(w)
+    %Whirlpool{n_w | buffer_bits: 0, buffer_pos: 0}
   end
 
-  @c0 [
+  @c0 {
     0x18186018c07830d8, 0x23238c2305af4626, 0xc6c63fc67ef991b8, 0xe8e887e8136fcdfb,
     0x878726874ca113cb, 0xb8b8dab8a9626d11, 0x0101040108050209, 0x4f4f214f426e9e0d,
     0x3636d836adee6c9b, 0xa6a6a2a6590451ff, 0xd2d26fd2debdb90c, 0xf5f5f3f5fb06f70e,
@@ -222,9 +218,9 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0x7070dd70a7ade0d7, 0xb6b6e2b6d954716f, 0xd0d067d0ceb7bd1e, 0xeded93ed3b7ec7d6,
     0xcccc17cc2edb85e2, 0x424215422a578468, 0x98985a98b4c22d2c, 0xa4a4aaa4490e55ed,
     0x2828a0285d885075, 0x5c5c6d5cda31b886, 0xf8f8c7f8933fed6b, 0x8686228644a411c2,
-  ] |> :array.from_list
+  }
 
-  @c1 [
+  @c1 {
     0xd818186018c07830, 0x2623238c2305af46, 0xb8c6c63fc67ef991, 0xfbe8e887e8136fcd,
     0xcb878726874ca113, 0x11b8b8dab8a9626d, 0x0901010401080502, 0x0d4f4f214f426e9e,
     0x9b3636d836adee6c, 0xffa6a6a2a6590451, 0x0cd2d26fd2debdb9, 0x0ef5f5f3f5fb06f7,
@@ -289,9 +285,9 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0xd77070dd70a7ade0, 0x6fb6b6e2b6d95471, 0x1ed0d067d0ceb7bd, 0xd6eded93ed3b7ec7,
     0xe2cccc17cc2edb85, 0x68424215422a5784, 0x2c98985a98b4c22d, 0xeda4a4aaa4490e55,
     0x752828a0285d8850, 0x865c5c6d5cda31b8, 0x6bf8f8c7f8933fed, 0xc28686228644a411,
-  ] |> :array.from_list
+  }
 
-  @c2 [
+  @c2 {
     0x30d818186018c078, 0x462623238c2305af, 0x91b8c6c63fc67ef9, 0xcdfbe8e887e8136f,
     0x13cb878726874ca1, 0x6d11b8b8dab8a962, 0x0209010104010805, 0x9e0d4f4f214f426e,
     0x6c9b3636d836adee, 0x51ffa6a6a2a65904, 0xb90cd2d26fd2debd, 0xf70ef5f5f3f5fb06,
@@ -356,9 +352,9 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0xe0d77070dd70a7ad, 0x716fb6b6e2b6d954, 0xbd1ed0d067d0ceb7, 0xc7d6eded93ed3b7e,
     0x85e2cccc17cc2edb, 0x8468424215422a57, 0x2d2c98985a98b4c2, 0x55eda4a4aaa4490e,
     0x50752828a0285d88, 0xb8865c5c6d5cda31, 0xed6bf8f8c7f8933f, 0x11c28686228644a4,
-  ] |> :array.from_list
+  }
 
-  @c3 [
+  @c3 {
     0x7830d818186018c0, 0xaf462623238c2305, 0xf991b8c6c63fc67e, 0x6fcdfbe8e887e813,
     0xa113cb878726874c, 0x626d11b8b8dab8a9, 0x0502090101040108, 0x6e9e0d4f4f214f42,
     0xee6c9b3636d836ad, 0x0451ffa6a6a2a659, 0xbdb90cd2d26fd2de, 0x06f70ef5f5f3f5fb,
@@ -423,9 +419,9 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0xade0d77070dd70a7, 0x54716fb6b6e2b6d9, 0xb7bd1ed0d067d0ce, 0x7ec7d6eded93ed3b,
     0xdb85e2cccc17cc2e, 0x578468424215422a, 0xc22d2c98985a98b4, 0x0e55eda4a4aaa449,
     0x8850752828a0285d, 0x31b8865c5c6d5cda, 0x3fed6bf8f8c7f893, 0xa411c28686228644,
-  ] |> :array.from_list
+  }
 
-  @c4 [
+  @c4 {
     0xc07830d818186018, 0x05af462623238c23, 0x7ef991b8c6c63fc6, 0x136fcdfbe8e887e8,
     0x4ca113cb87872687, 0xa9626d11b8b8dab8, 0x0805020901010401, 0x426e9e0d4f4f214f,
     0xadee6c9b3636d836, 0x590451ffa6a6a2a6, 0xdebdb90cd2d26fd2, 0xfb06f70ef5f5f3f5,
@@ -490,9 +486,9 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0xa7ade0d77070dd70, 0xd954716fb6b6e2b6, 0xceb7bd1ed0d067d0, 0x3b7ec7d6eded93ed,
     0x2edb85e2cccc17cc, 0x2a57846842421542, 0xb4c22d2c98985a98, 0x490e55eda4a4aaa4,
     0x5d8850752828a028, 0xda31b8865c5c6d5c, 0x933fed6bf8f8c7f8, 0x44a411c286862286,
-  ] |> :array.from_list
+  }
 
-  @c5 [
+  @c5 {
     0x18c07830d8181860, 0x2305af462623238c, 0xc67ef991b8c6c63f, 0xe8136fcdfbe8e887,
     0x874ca113cb878726, 0xb8a9626d11b8b8da, 0x0108050209010104, 0x4f426e9e0d4f4f21,
     0x36adee6c9b3636d8, 0xa6590451ffa6a6a2, 0xd2debdb90cd2d26f, 0xf5fb06f70ef5f5f3,
@@ -557,9 +553,9 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0x70a7ade0d77070dd, 0xb6d954716fb6b6e2, 0xd0ceb7bd1ed0d067, 0xed3b7ec7d6eded93,
     0xcc2edb85e2cccc17, 0x422a578468424215, 0x98b4c22d2c98985a, 0xa4490e55eda4a4aa,
     0x285d8850752828a0, 0x5cda31b8865c5c6d, 0xf8933fed6bf8f8c7, 0x8644a411c2868622,
-  ] |> :array.from_list
+  }
 
-  @c6 [
+  @c6 {
     0x6018c07830d81818, 0x8c2305af46262323, 0x3fc67ef991b8c6c6, 0x87e8136fcdfbe8e8,
     0x26874ca113cb8787, 0xdab8a9626d11b8b8, 0x0401080502090101, 0x214f426e9e0d4f4f,
     0xd836adee6c9b3636, 0xa2a6590451ffa6a6, 0x6fd2debdb90cd2d2, 0xf3f5fb06f70ef5f5,
@@ -624,9 +620,9 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0xdd70a7ade0d77070, 0xe2b6d954716fb6b6, 0x67d0ceb7bd1ed0d0, 0x93ed3b7ec7d6eded,
     0x17cc2edb85e2cccc, 0x15422a5784684242, 0x5a98b4c22d2c9898, 0xaaa4490e55eda4a4,
     0xa0285d8850752828, 0x6d5cda31b8865c5c, 0xc7f8933fed6bf8f8, 0x228644a411c28686,
-  ] |> :array.from_list
+  }
 
-  @c7 [
+  @c7 {
     0x186018c07830d818, 0x238c2305af462623, 0xc63fc67ef991b8c6, 0xe887e8136fcdfbe8,
     0x8726874ca113cb87, 0xb8dab8a9626d11b8, 0x0104010805020901, 0x4f214f426e9e0d4f,
     0x36d836adee6c9b36, 0xa6a2a6590451ffa6, 0xd26fd2debdb90cd2, 0xf5f3f5fb06f70ef5,
@@ -691,7 +687,7 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0x70dd70a7ade0d770, 0xb6e2b6d954716fb6, 0xd067d0ceb7bd1ed0, 0xed93ed3b7ec7d6ed,
     0xcc17cc2edb85e2cc, 0x4215422a57846842, 0x985a98b4c22d2c98, 0xa4aaa4490e55eda4,
     0x28a0285d88507528, 0x5c6d5cda31b8865c, 0xf8c7f8933fed6bf8, 0x86228644a411c286,
-  ] |> :array.from_list
+  }
 
   @rc [
     0x1823c6e887b8014f,
@@ -706,47 +702,46 @@ defmodule ExCrypto.Hasher.Whirlpool do
     0xca2dbf07ad5a8333,
   ]
 
-  defp try_transform(%Whirlpool{buffer_bits: buffer_bits} = w) when buffer_bits != @digest_bits, do: w
-  defp try_transform(%Whirlpool{} = w) do
-    n_w = transform(w)
-    %Whirlpool{n_w | buffer_bits: 0, buffer_pos: 0}
-  end
-
   defp transform(%Whirlpool{buffer: buffer, hash: hash} = w) do
-    blocks = :array.to_list(buffer) |> Enum.chunk(8) |> Enum.map(&:binary.decode_unsigned(:erlang.list_to_binary(&1), :big)) |> :array.from_list
-    state = transform_round(@rc, hash, :array.map(fn i, block -> block ^^^ :array.get(i, hash) end, blocks))
+    blocks = :array.to_list(buffer) |> Enum.chunk(8) |> Enum.map(&:binary.decode_unsigned(IO.iodata_to_binary(&1), :big))
+    state = transform_round(@rc, hash |> List.to_tuple, Stream.zip(blocks, hash) |> Enum.map(fn {block, hash} -> block ^^^ hash end) |> List.to_tuple)
 
-    %Whirlpool{w | hash: :array.map(fn i, hi -> hi ^^^ :array.get(i, state) ^^^ :array.get(i, blocks) end, hash)}
+    n_hash = Stream.zip(blocks, hash)
+    |> Stream.with_index
+    |> Enum.map(fn {{block, hash_element}, i} ->
+      hash_element ^^^ elem(state, i) ^^^ block
+    end)
+
+    %Whirlpool{w | hash: n_hash}
   end
 
   defp transform_round([], _k, state), do: state
   defp transform_round([r | rest], k, state) do
-    n_l = 0..7 |> Enum.map(fn i ->
-      (((:array.get(rem(i + 0, 8), k) >>> 56) &&& 0xff) |> :array.get(@c0)) ^^^
-      (((:array.get(rem(i + 7, 8), k) >>> 48) &&& 0xff) |> :array.get(@c1)) ^^^
-      (((:array.get(rem(i + 6, 8), k) >>> 40) &&& 0xff) |> :array.get(@c2)) ^^^
-      (((:array.get(rem(i + 5, 8), k) >>> 32) &&& 0xff) |> :array.get(@c3)) ^^^
-      (((:array.get(rem(i + 4, 8), k) >>> 24) &&& 0xff) |> :array.get(@c4)) ^^^
-      (((:array.get(rem(i + 3, 8), k) >>> 16) &&& 0xff) |> :array.get(@c5)) ^^^
-      (((:array.get(rem(i + 2, 8), k) >>>  8) &&& 0xff) |> :array.get(@c6)) ^^^
-      (((:array.get(rem(i + 1, 8), k) >>>  0) &&& 0xff) |> :array.get(@c7))
-    end) |> :array.from_list
+    [n_k_first | n_k_rest] = 0..7 |> Enum.map(fn i ->
+      elem(@c0, (elem(k, rem(i + 0, 8)) >>> 56) &&& 0xff) ^^^
+      elem(@c1, (elem(k, rem(i + 7, 8)) >>> 48) &&& 0xff) ^^^
+      elem(@c2, (elem(k, rem(i + 6, 8)) >>> 40) &&& 0xff) ^^^
+      elem(@c3, (elem(k, rem(i + 5, 8)) >>> 32) &&& 0xff) ^^^
+      elem(@c4, (elem(k, rem(i + 4, 8)) >>> 24) &&& 0xff) ^^^
+      elem(@c5, (elem(k, rem(i + 3, 8)) >>> 16) &&& 0xff) ^^^
+      elem(@c6, (elem(k, rem(i + 2, 8)) >>>  8) &&& 0xff) ^^^
+      elem(@c7, (elem(k, rem(i + 1, 8)) >>>  0) &&& 0xff)
+    end)
+    n_k = [n_k_first ^^^ r | n_k_rest] |> List.to_tuple
 
-    n_l2 = :array.set(0, :array.get(0, n_l) ^^^ r, n_l)
+    n_state = 0..7 |> Enum.map(fn i ->
+      elem(@c0, (elem(state, rem(i + 0, 8)) >>> 56) &&& 0xff) ^^^
+      elem(@c1, (elem(state, rem(i + 7, 8)) >>> 48) &&& 0xff) ^^^
+      elem(@c2, (elem(state, rem(i + 6, 8)) >>> 40) &&& 0xff) ^^^
+      elem(@c3, (elem(state, rem(i + 5, 8)) >>> 32) &&& 0xff) ^^^
+      elem(@c4, (elem(state, rem(i + 4, 8)) >>> 24) &&& 0xff) ^^^
+      elem(@c5, (elem(state, rem(i + 3, 8)) >>> 16) &&& 0xff) ^^^
+      elem(@c6, (elem(state, rem(i + 2, 8)) >>>  8) &&& 0xff) ^^^
+      elem(@c7, (elem(state, rem(i + 1, 8)) >>>  0) &&& 0xff) ^^^
+      elem(n_k, i)
+    end) |> List.to_tuple
 
-    n_l3 = 0..7 |> Enum.map(fn i ->
-      (((:array.get(rem(i + 0, 8), state) >>> 56) &&& 0xff) |> :array.get(@c0)) ^^^
-      (((:array.get(rem(i + 7, 8), state) >>> 48) &&& 0xff) |> :array.get(@c1)) ^^^
-      (((:array.get(rem(i + 6, 8), state) >>> 40) &&& 0xff) |> :array.get(@c2)) ^^^
-      (((:array.get(rem(i + 5, 8), state) >>> 32) &&& 0xff) |> :array.get(@c3)) ^^^
-      (((:array.get(rem(i + 4, 8), state) >>> 24) &&& 0xff) |> :array.get(@c4)) ^^^
-      (((:array.get(rem(i + 3, 8), state) >>> 16) &&& 0xff) |> :array.get(@c5)) ^^^
-      (((:array.get(rem(i + 2, 8), state) >>>  8) &&& 0xff) |> :array.get(@c6)) ^^^
-      (((:array.get(rem(i + 1, 8), state) >>>  0) &&& 0xff) |> :array.get(@c7)) ^^^
-      :array.get(i, n_l2)
-    end) |> :array.from_list
-
-    transform_round(rest, n_l2, n_l3)
+    transform_round(rest, n_k, n_state)
   end
 
 end

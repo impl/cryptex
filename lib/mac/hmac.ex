@@ -5,30 +5,40 @@ defmodule ExCrypto.Mac.Hmac do
 
   use Bitwise
 
-  defstruct module: nil
+  defstruct hasher: nil
+  @typedoc """
+  An opaque instance of this module that can be used to predefine a hashing algorithm to use for key generation.
+  """
+  @opaque t :: %Hmac{}
 
-  def new(module) do
-    %Hmac{module: module}
+  @spec new(Hasher.t | Hasher.algorithm) :: Hmac.t
+  def new(%Hasher{} = hasher), do: %Hmac{hasher: hasher}
+  def new(module), do: Hasher.new(module) |> new
+
+  @spec generate(Hmac.t | Hasher.t | Hasher.algorithm, binary, Hasher.State.digestable) :: binary
+  def generate(%Hmac{hasher: hasher}, key, data) do
+    hmac_inner(hasher, Hasher.block_size(hasher), key, data)
   end
+  def generate(module, key, data), do: generate(new(module), key, data)
 
-  def hmac(%Hmac{module: module}, key, data), do: hmac(module, key, data)
-  def hmac(module, key, data) do
-    hmac_inner(module, Hasher.block_size(module), key, data)
+  @spec hasher(Hmac.t) :: Hasher.t
+  def hasher(%Hmac{hasher: hasher}), do: hasher
+
+  @spec digest_size(Hmac.t) :: integer
+  def digest_size(%Hmac{hasher: hasher}), do: Hasher.digest_size(hasher)
+
+  defp hmac_inner(hasher, block_size, key, data) when byte_size(key) > block_size do
+    hmac_inner(hasher, block_size, Hasher.digest(hasher, key), data)
   end
+  defp hmac_inner(hasher, block_size, key, data) do
+    key_pad_bits = (block_size - byte_size(key)) * 8
+    key_prime = key <> <<0 :: size(key_pad_bits)>>
 
-  def hasher(%Hmac{module: module}), do: module
-  def digest_size(%Hmac{module: module}), do: Hasher.digest_size(module)
+    o_pad = :crypto.exor(key_prime, String.duplicate(<<0x5c>>, block_size))
+    i_pad = :crypto.exor(key_prime, String.duplicate(<<0x36>>, block_size))
 
-  defp hmac_inner(module, block_size, key, data) when byte_size(key) > block_size do
-    hmac_inner(module, block_size, Hasher.digest(module, key), data)
-  end
-  defp hmac_inner(module, block_size, key, data) do
-    key_prime = :erlang.binary_to_list(key) ++ (1..(block_size - byte_size(key)) |> Enum.map(fn _ -> 0 end))
-    o_pad = key_prime |> Enum.map(&(0x5c ^^^ &1))
-    i_pad = key_prime |> Enum.map(&(0x36 ^^^ &1))
-
-    inner = Hasher.digest(module, IO.iodata_to_binary([i_pad, data]))
-    Hasher.digest(module, IO.iodata_to_binary([o_pad, inner]))
+    inner = Hasher.digest(hasher, [i_pad, data])
+    Hasher.digest(hasher, [o_pad, inner])
   end
 
 end

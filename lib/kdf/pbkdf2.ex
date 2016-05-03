@@ -9,18 +9,34 @@ defmodule ExCrypto.Kdf.Pbkdf2 do
 
   alias ExCrypto.Kdf.Pbkdf2
   alias ExCrypto.Kdf.Pbkdf2.Prf
+  alias ExCrypto.Kdf.Pbkdf2.Result
 
   @default_rounds 160_000
   @default_salt_size 16
 
-  defstruct prf: nil, digest: nil, salt: nil, rounds: nil
+  defstruct prf: nil, opts: []
+  @opaque t :: %Pbkdf2{}
 
-  def new(prf, secret, salt \\ nil, opts \\ [])
-  def new(prf, secret, nil, opts) do
-    salt = random_salt(Keyword.get(opts, :salt_size, @default_salt_size))
-    new(prf, secret, salt, opts)
+  @spec new(Prf.t, Keyword.t) :: t
+  def new(prf, opts \\ []) do
+    %Pbkdf2{prf: prf, opts: opts}
   end
-  def new(prf, secret, salt, opts) do
+
+  @spec from_computed(Prf.t, integer, binary, binary) :: Result.t
+  def from_computed(prf, rounds, salt, secret) do
+    Result.new(prf, rounds, salt, secret)
+  end
+
+  @spec derive(t | Prf.t, any, binary | nil, Keyword.t) :: Result.t
+  def derive(pbkdf2_or_prf, secret, salt \\ nil, opts \\ [])
+  def derive(%Pbkdf2{prf: prf, opts: base_opts}, secret, salt, opts) do
+    derive(prf, secret, salt, Keyword.merge(base_opts, opts))
+  end
+  def derive(prf, secret, nil, opts) do
+    salt = random_salt(Keyword.get(opts, :salt_size, @default_salt_size))
+    derive(prf, secret, salt, opts)
+  end
+  def derive(prf, secret, salt, opts) do
     rounds = Keyword.get(opts, :rounds, @default_rounds)
     digest_size = Prf.digest_size(prf)
     hash_size = Keyword.get(opts, :hash_size, digest_size)
@@ -31,12 +47,6 @@ defmodule ExCrypto.Kdf.Pbkdf2 do
     end
   end
 
-  def digest(%Pbkdf2{digest: digest}), do: digest
-
-  def salt(%Pbkdf2{salt: salt}), do: salt
-
-  def rounds(%Pbkdf2{rounds: rounds}), do: rounds
-
   defp hash_inner(_acc, _prf, _secret, _salt, rounds, _hash_size, _remaining, _block_index) when rounds <= 0 do
     raise ArgumentError, "Number of rounds must be greater than 0"
   end
@@ -44,7 +54,7 @@ defmodule ExCrypto.Kdf.Pbkdf2 do
     raise ArgumentError, "Hash size must be greater than 0"
   end
   defp hash_inner(acc, prf, _secret, salt, rounds, _hash_size, 0, _block_index) do
-    %Pbkdf2{prf: prf, digest: acc |> Enum.reverse |> IO.iodata_to_binary, salt: salt, rounds: rounds}
+    Result.new(prf, rounds, salt, acc |> Enum.reverse |> IO.iodata_to_binary)
   end
   defp hash_inner(acc, prf, secret, salt, rounds, hash_size, remaining, block_index) do
     initial = Prf.apply(prf, secret, <<salt :: binary, block_index :: big-integer-size(32)>>)
@@ -63,44 +73,6 @@ defmodule ExCrypto.Kdf.Pbkdf2 do
   end
   defp random_salt(salt_size) do
     :crypto.strong_rand_bytes(salt_size)
-  end
-
-  defprotocol Prf do
-
-    def apply(f, secret, salt)
-    def digest_size(f)
-    def name(f)
-
-  end
-
-  defmodule Mcf.Alphabet do
-
-    use ExCrypto.Utils.Base64, alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789./', padding: false
-
-  end
-
-end
-
-defimpl ExCrypto.Kdf.Pbkdf2.Prf, for: ExCrypto.Mac.Hmac do
-
-  alias ExCrypto.Hasher
-  alias ExCrypto.Mac.Hmac
-
-  defdelegate apply(f, secret, salt), to: Hmac, as: :hmac
-  defdelegate digest_size(f), to: Hmac
-  def name(f), do: Hmac.hasher(f) |> Hasher.name
-
-end
-
-defimpl ExCrypto.Mcf.Encoder, for: ExCrypto.Kdf.Pbkdf2 do
-
-  alias ExCrypto.Kdf.Pbkdf2
-
-  def encode(%Pbkdf2{prf: %ExCrypto.Mac.Hmac{} = prf, digest: digest, salt: salt, rounds: rounds}) do
-    {"pbkdf2-#{Pbkdf2.Prf.name(prf)}", "#{rounds}$#{Pbkdf2.Mcf.Alphabet.encode(salt)}$#{Pbkdf2.Mcf.Alphabet.encode(digest)}"}
-  end
-  def encode(_) do
-    raise ArgumentError, "No representation for this pseudo-random function is available for PBKDF2"
   end
 
 end
