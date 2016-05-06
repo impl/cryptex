@@ -4,7 +4,8 @@
 # https://github.com/jzelinskie/whirlpool/blob/4d5707335271c030eac0988ca9b16cfc40e7a788/whirlpool.go
 #
 # Copyright 2012 Jimmy Zelinskie. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file
+# at the root of this project.
 
 defmodule Cryptex.Hasher.Algorithm.Whirlpool do
 
@@ -46,8 +47,8 @@ defmodule Cryptex.Hasher.Algorithm.Whirlpool do
   def update(%Whirlpool{bit_length: bit_length} = w, data) when is_binary(data) do
     data_bits = bit_size(data)
 
-    n_bit_length = update_bit_length(bit_length, data_bits)
-    update_buffer(%Whirlpool{w | bit_length: n_bit_length}, data, data_bits)
+    bit_length = update_bit_length(bit_length, data_bits)
+    update_buffer(%Whirlpool{w | bit_length: bit_length}, data, data_bits)
   end
 
   defp update_bit_length(bit_length, data_bits) do
@@ -56,9 +57,9 @@ defmodule Cryptex.Hasher.Algorithm.Whirlpool do
   defp update_bit_length(acc, [], _, _) do
     acc |> Enum.reverse
   end
-  defp update_bit_length(acc, [c | bit_length], carry, value) when carry != 0 or value != 0 do
-    n_carry = carry + c + (value &&& 0xff)
-    update_bit_length([(n_carry &&& 0xff) | acc], bit_length, n_carry >>> 8, value >>> 8)
+  defp update_bit_length(acc, [c | bit_length], carry, value) when carry !== 0 or value !== 0 do
+    carry = carry + c + (value &&& 0xff)
+    update_bit_length([(carry &&& 0xff) | acc], bit_length, carry >>> 8, value >>> 8)
   end
   defp update_bit_length(acc, rest, carry, value) do
     update_bit_length(acc, [], carry, value) ++ rest
@@ -73,23 +74,23 @@ defmodule Cryptex.Hasher.Algorithm.Whirlpool do
   defp update_buffer(%Whirlpool{buffer: buffer, buffer_bits: buffer_bits, buffer_pos: buffer_pos} = w, <<in1, in2, rest :: binary>>, data_gap, buffer_rem) do
     b = ((in1 <<< data_gap) &&& 0xff) ||| ((in2 &&& 0xff) >>> (8 - data_gap))
 
-    n_buffer = :array.set(buffer_pos, :array.get(buffer_pos, buffer) ||| (b >>> buffer_rem), buffer)
-    n_buffer_bits = buffer_bits + (8 - buffer_rem)
-    n_buffer_pos = buffer_pos + 1
+    buffer = :array.set(buffer_pos, :array.get(buffer_pos, buffer) ||| (b >>> buffer_rem), buffer)
+    buffer_bits = buffer_bits + (8 - buffer_rem)
+    buffer_pos = buffer_pos + 1
 
-    n_w = try_transform(%Whirlpool{w | buffer: n_buffer, buffer_bits: n_buffer_bits, buffer_pos: n_buffer_pos})
+    w = try_transform(%Whirlpool{w | buffer: buffer, buffer_bits: buffer_bits, buffer_pos: buffer_pos})
 
-    n_buffer2 = :array.set(n_w.buffer_pos, (b <<< (8 - buffer_rem)) &&& 0xff, n_w.buffer)
-    n_buffer_bits2 = n_w.buffer_bits + buffer_rem
+    buffer = :array.set(w.buffer_pos, (b <<< (8 - buffer_rem)) &&& 0xff, w.buffer)
+    buffer_bits = w.buffer_bits + buffer_rem
 
-    update_buffer(%Whirlpool{n_w | buffer: n_buffer2, buffer_bits: n_buffer_bits2}, <<in2, rest :: binary>>, data_gap, buffer_rem)
+    update_buffer(%Whirlpool{w | buffer: buffer, buffer_bits: buffer_bits}, <<in2, rest :: binary>>, data_gap, buffer_rem)
   end
   defp update_buffer(%Whirlpool{buffer: buffer, buffer_pos: buffer_pos} = w, <<in1>>, data_gap, buffer_rem) do
     b = (in1 <<< data_gap) &&& 0xff
 
-    n_buffer = :array.set(buffer_pos, :array.get(buffer_pos, buffer) ||| (b >>> buffer_rem), buffer)
+    buffer = :array.set(buffer_pos, :array.get(buffer_pos, buffer) ||| (b >>> buffer_rem), buffer)
 
-    update_buffer_tail(%Whirlpool{w | buffer: n_buffer}, b, 8, buffer_rem)
+    update_buffer_tail(%Whirlpool{w | buffer: buffer}, b, 8, buffer_rem)
   end
   defp update_buffer(%Whirlpool{} = w, <<>>, _data_gap, buffer_rem) do
     update_buffer_tail(w, 0, 0, buffer_rem)
@@ -99,42 +100,42 @@ defmodule Cryptex.Hasher.Algorithm.Whirlpool do
     %Whirlpool{w | buffer_bits: buffer_bits + bits}
   end
   defp update_buffer_tail(%Whirlpool{buffer_bits: buffer_bits, buffer_pos: buffer_pos} = w, b, bits, buffer_rem) do
-    n_buffer_bits = buffer_bits + (8 - buffer_rem)
-    n_buffer_pos = buffer_pos + 1
+    buffer_bits = buffer_bits + (8 - buffer_rem)
+    buffer_pos = buffer_pos + 1
 
-    n_bits = bits - (8 - buffer_rem)
+    bits = bits - (8 - buffer_rem)
 
-    n_w = try_transform(%Whirlpool{w | buffer_bits: n_buffer_bits, buffer_pos: n_buffer_pos})
+    w = try_transform(%Whirlpool{w | buffer_bits: buffer_bits, buffer_pos: buffer_pos})
 
-    n_buffer = :array.set(n_w.buffer_pos, (b <<< (8 - buffer_rem)) &&& 0xff, n_w.buffer)
-    n_buffer_bits2 = n_w.buffer_bits + n_bits
+    buffer = :array.set(w.buffer_pos, (b <<< (8 - buffer_rem)) &&& 0xff, w.buffer)
+    buffer_bits = w.buffer_bits + bits
 
-    %Whirlpool{n_w | buffer: n_buffer, buffer_bits: n_buffer_bits2}
+    %Whirlpool{w | buffer: buffer, buffer_bits: buffer_bits}
   end
 
   @spec digest(t) :: binary
   def digest(%Whirlpool{buffer: buffer, buffer_bits: buffer_bits, buffer_pos: buffer_pos} = w) do
-    n_buffer = :array.set(buffer_pos, :array.get(buffer_pos, buffer) ||| (0x80 >>> (buffer_bits &&& 7)), buffer)
-    n_buffer_pos = buffer_pos + 1
+    buffer = :array.set(buffer_pos, :array.get(buffer_pos, buffer) ||| (0x80 >>> (buffer_bits &&& 7)), buffer)
+    buffer_pos = buffer_pos + 1
 
-    n_w = %Whirlpool{w | buffer: n_buffer, buffer_pos: n_buffer_pos} |> try_final_pad_upper |> try_final_pad_lower
-    n_w2 = append_bit_length(%Whirlpool{n_w | buffer_pos: @block_bytes - @length_bytes})
+    w = %Whirlpool{w | buffer: buffer, buffer_pos: buffer_pos} |> try_final_pad_upper |> try_final_pad_lower
+    w = append_bit_length(%Whirlpool{w | buffer_pos: @block_bytes - @length_bytes})
 
-    transform(n_w2).hash |> Enum.map(&(<<&1 :: big-integer-size(@digest_bits_per_element)>>)) |> IO.iodata_to_binary
+    transform(w).hash |> Enum.map(&(<<&1 :: big-integer-size(@digest_bits_per_element)>>)) |> IO.iodata_to_binary
   end
 
   defp try_final_pad_upper(%Whirlpool{buffer: buffer, buffer_pos: buffer_pos} = w) when buffer_pos > @block_bytes - @length_bytes do
-    n_buffer = buffer_pos..(@block_bytes - 1) |> Enum.reduce(buffer, fn i, acc -> :array.set(i, 0, acc) end)
-    n_w = transform(%Whirlpool{w | buffer: n_buffer})
+    buffer = buffer_pos..(@block_bytes - 1) |> Enum.reduce(buffer, fn i, acc -> :array.set(i, 0, acc) end)
+    w = transform(%Whirlpool{w | buffer: buffer})
 
-    %Whirlpool{n_w | buffer_pos: 0}
+    %Whirlpool{w | buffer_pos: 0}
   end
   defp try_final_pad_upper(%Whirlpool{} = w), do: w
 
   defp try_final_pad_lower(%Whirlpool{buffer: buffer, buffer_pos: buffer_pos} = w) when buffer_pos < @block_bytes - @length_bytes do
-    n_buffer = buffer_pos..(@block_bytes - @length_bytes - 1) |> Enum.reduce(buffer, fn i, acc -> :array.set(i, 0, acc) end)
+    buffer = buffer_pos..(@block_bytes - @length_bytes - 1) |> Enum.reduce(buffer, fn i, acc -> :array.set(i, 0, acc) end)
 
-    %Whirlpool{w | buffer: n_buffer}
+    %Whirlpool{w | buffer: buffer}
   end
   defp try_final_pad_lower(%Whirlpool{} = w), do: w
 
@@ -142,15 +143,14 @@ defmodule Cryptex.Hasher.Algorithm.Whirlpool do
     append_bit_length(w, @length_bytes - 1, bit_length)
   end
   defp append_bit_length(%Whirlpool{buffer: buffer, buffer_pos: buffer_pos} = w, bit_length_pos, [bit_length | rest]) do
-    n_buffer = :array.set(buffer_pos + bit_length_pos, bit_length, buffer)
-    append_bit_length(%Whirlpool{w | buffer: n_buffer}, bit_length_pos - 1, rest)
+    buffer = :array.set(buffer_pos + bit_length_pos, bit_length, buffer)
+    append_bit_length(%Whirlpool{w | buffer: buffer}, bit_length_pos - 1, rest)
   end
   defp append_bit_length(%Whirlpool{} = w, _, []), do: w
 
   defp try_transform(%Whirlpool{buffer_bits: buffer_bits} = w) when buffer_bits != @digest_bits, do: w
   defp try_transform(%Whirlpool{} = w) do
-    n_w = transform(w)
-    %Whirlpool{n_w | buffer_bits: 0, buffer_pos: 0}
+    %Whirlpool{transform(w) | buffer_bits: 0, buffer_pos: 0}
   end
 
   @c0 {
@@ -706,18 +706,17 @@ defmodule Cryptex.Hasher.Algorithm.Whirlpool do
     blocks = :array.to_list(buffer) |> Enum.chunk(8) |> Enum.map(&:binary.decode_unsigned(IO.iodata_to_binary(&1), :big))
     state = transform_round(@rc, hash |> List.to_tuple, Stream.zip(blocks, hash) |> Enum.map(fn {block, hash} -> block ^^^ hash end) |> List.to_tuple)
 
-    n_hash = Stream.zip(blocks, hash)
-    |> Stream.with_index
+    hash = Stream.zip(blocks, hash) |> Stream.with_index
     |> Enum.map(fn {{block, hash_element}, i} ->
       hash_element ^^^ elem(state, i) ^^^ block
     end)
 
-    %Whirlpool{w | hash: n_hash}
+    %Whirlpool{w | hash: hash}
   end
 
   defp transform_round([], _k, state), do: state
   defp transform_round([r | rest], k, state) do
-    [n_k_first | n_k_rest] = 0..7 |> Enum.map(fn i ->
+    [k_first | k_rest] = 0..7 |> Enum.map(fn i ->
       elem(@c0, (elem(k, rem(i + 0, 8)) >>> 56) &&& 0xff) ^^^
       elem(@c1, (elem(k, rem(i + 7, 8)) >>> 48) &&& 0xff) ^^^
       elem(@c2, (elem(k, rem(i + 6, 8)) >>> 40) &&& 0xff) ^^^
@@ -727,9 +726,9 @@ defmodule Cryptex.Hasher.Algorithm.Whirlpool do
       elem(@c6, (elem(k, rem(i + 2, 8)) >>>  8) &&& 0xff) ^^^
       elem(@c7, (elem(k, rem(i + 1, 8)) >>>  0) &&& 0xff)
     end)
-    n_k = [n_k_first ^^^ r | n_k_rest] |> List.to_tuple
+    k = [k_first ^^^ r | k_rest] |> List.to_tuple
 
-    n_state = 0..7 |> Enum.map(fn i ->
+    state = 0..7 |> Enum.map(fn i ->
       elem(@c0, (elem(state, rem(i + 0, 8)) >>> 56) &&& 0xff) ^^^
       elem(@c1, (elem(state, rem(i + 7, 8)) >>> 48) &&& 0xff) ^^^
       elem(@c2, (elem(state, rem(i + 6, 8)) >>> 40) &&& 0xff) ^^^
@@ -738,10 +737,10 @@ defmodule Cryptex.Hasher.Algorithm.Whirlpool do
       elem(@c5, (elem(state, rem(i + 3, 8)) >>> 16) &&& 0xff) ^^^
       elem(@c6, (elem(state, rem(i + 2, 8)) >>>  8) &&& 0xff) ^^^
       elem(@c7, (elem(state, rem(i + 1, 8)) >>>  0) &&& 0xff) ^^^
-      elem(n_k, i)
+      elem(k, i)
     end) |> List.to_tuple
 
-    transform_round(rest, n_k, n_state)
+    transform_round(rest, k, state)
   end
 
 end

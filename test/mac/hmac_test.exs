@@ -59,7 +59,11 @@ defmodule Cryptex.Mac.HmacTest do
 
   test "known HMACs are correctly calculated" do
     @golden_nist_test_vectors |> Enum.map(fn {algo, hmac, key, data} ->
-      assert Hmac.generate(algo, key |> Base.decode16!, data |> Base.decode16!) |> Base.encode16 == hmac
+      key = key |> Base.decode16!
+      data = data |> Base.decode16!
+
+      assert Hmac.generate(algo, key, data) |> Base.encode16 == hmac
+      assert Hmac.is_authenticated?(algo, key, data, hmac |> Base.decode16!)
     end)
   end
 

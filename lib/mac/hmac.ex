@@ -2,14 +2,12 @@ defmodule Cryptex.Mac.Hmac do
 
   alias Cryptex.Hasher
   alias Cryptex.Mac.Hmac
+  alias Cryptex.Utils.ConstantTime
 
   use Bitwise
 
   defstruct hasher: nil
-  @typedoc """
-  An opaque instance of this module that can be used to predefine a hashing algorithm to use for key generation.
-  """
-  @opaque t :: %Hmac{}
+  @type t :: %__MODULE__{hasher: Hasher.t}
 
   @spec new(Hasher.t | Hasher.algorithm) :: Hmac.t
   def new(%Hasher{} = hasher), do: %Hmac{hasher: hasher}
@@ -20,6 +18,11 @@ defmodule Cryptex.Mac.Hmac do
     hmac_inner(hasher, Hasher.block_size(hasher), key, data)
   end
   def generate(module, key, data), do: generate(new(module), key, data)
+
+  @spec is_authenticated?(Hmac.t | Hasher.t | Hasher.algorithm, binary, Hasher.State.digestable, binary) :: boolean
+  def is_authenticated?(hmac_or_hasher, key, data, test) do
+    ConstantTime.binaries_equal?(generate(hmac_or_hasher, key, data), test)
+  end
 
   @spec hasher(Hmac.t) :: Hasher.t
   def hasher(%Hmac{hasher: hasher}), do: hasher

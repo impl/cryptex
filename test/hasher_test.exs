@@ -15,12 +15,6 @@ defmodule Cryptex.HasherTest do
     end)
   end
 
-  test "hasher implementations are collectable" do
-    @provided |> Enum.map(fn algo ->
-      assert ["te", "st"] |> Enum.into(Hasher.new(algo)) == Hasher.digest(algo, "test")
-    end)
-  end
-
   test "digest with data is equivalent to new followed by update followed by digest" do
     @provided |> Enum.map(fn algo ->
       assert Hasher.new_state(algo) |> Hasher.State.update("test") |> Hasher.State.digest == Hasher.digest(algo, "test")

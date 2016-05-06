@@ -1,3 +1,10 @@
+# Based on the Elixir core implementation.
+# https://github.com/elixir-lang/elixir/blob/bfd1c891c38a28d060d6bb094ef920b6e32c2cb6/lib/elixir/lib/base.ex
+#
+# Copyright (c) 2012 Plataformatec
+# Released under the Apache License, Version 2.0. For more information, see the LICENSE file at the
+# root of this project.
+
 defmodule Cryptex.Utils.Base64 do
 
   use Bitwise
@@ -54,7 +61,7 @@ defmodule Cryptex.Utils.Base64 do
 
   defp do_encode(<<>>, _, _), do: <<>>
   defp do_encode(data, encode_char, pad?) do
-    split =  3 * div(byte_size(data), 3)
+    split = 3 * div(byte_size(data), 3)
     <<main :: size(split)-binary, rest :: binary>> = data
     main = for <<c :: 6 <- main>>, into: <<>>, do: <<encode_char.(c) :: 8>>
     tail = case rest do

@@ -3,7 +3,9 @@
 # Based on David Whitlock's implementation in Comeonin.
 # https://github.com/elixircnx/comeonin/blob/88af670ccd4e6615ff8ddf987aa47ed182b29a08/lib/comeonin/pbkdf2.ex
 #
-# Released under a BSD-style license. For more information, see the included LICENSE file.
+# Copyright (c) 2014-2016 David Whitlock <alovedalongthe@gmail.com>
+# Released under a BSD-style license. For more information, see the LICENSE file at the root of
+# this project.
 
 defmodule Cryptex.Kdf.Pbkdf2 do
 
@@ -15,16 +17,11 @@ defmodule Cryptex.Kdf.Pbkdf2 do
   @default_salt_size 16
 
   defstruct prf: nil, opts: []
-  @opaque t :: %Pbkdf2{}
+  @type t :: %__MODULE__{prf: Prf.t, opts: Keyword.t}
 
   @spec new(Prf.t, Keyword.t) :: t
   def new(prf, opts \\ []) do
     %Pbkdf2{prf: prf, opts: opts}
-  end
-
-  @spec from_computed(Prf.t, integer, binary, binary) :: Result.t
-  def from_computed(prf, rounds, salt, secret) do
-    Result.new(prf, rounds, salt, secret)
   end
 
   @spec derive(t | Prf.t, any, binary | nil, Keyword.t) :: Result.t

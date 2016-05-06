@@ -1,6 +1,9 @@
 defprotocol Cryptex.Kdf.Pbkdf2.Prf do
 
+  @spec apply(t, any, binary) :: binary
   def apply(f, secret, salt)
+
+  @spec digest_size(t) :: integer
   def digest_size(f)
 
 end

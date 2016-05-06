@@ -8,5 +8,4 @@ install:
   - mix local.hex --force
   - mix deps.get
 script:
-  - mix test --cover
   - mix coveralls.travis

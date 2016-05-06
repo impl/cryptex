@@ -6,7 +6,7 @@ defmodule Cryptex.Hasher do
   @type algorithm :: Cryptex.Hasher.Algorithm.t | atom
 
   defstruct module: nil, opts: []
-  @opaque t :: %Hasher{}
+  @type t :: %__MODULE__{module: Cryptex.Hasher.Algorithm.t, opts: Keyword.t}
 
   @spec new(algorithm, Keyword.t) :: t
   def new(module, opts \\ []) do
@@ -47,18 +47,6 @@ defmodule Cryptex.Hasher do
       "Elixir." <> _ -> module
       reference -> Module.concat(__MODULE__.Algorithm, Macro.camelize(reference))
     end
-  end
-
-  defimpl Collectable do
-
-    def into(%Hasher{} = original) do
-      {Hasher.new_state(original), fn
-        state, {:cont, data} -> State.update(state, data)
-        state, :done -> State.digest(state)
-        _, :halt -> :ok
-      end}
-    end
-
   end
 
 end
