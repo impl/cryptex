@@ -86,7 +86,7 @@ Cryptex.Mac.Hmac.new(:sha256)
 
 ### Verify an HMAC
 
-```
+```elixir
 mac = "02AFB56304902C656FCB737CDD03DE6205BB6D401DA2812EFD9B2D36A08AF159"
 Cryptex.Mac.Hmac.is_authenticated?(:sha256, "key", "test", mac |> Base.decode16!)
   # => true

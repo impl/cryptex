@@ -67,6 +67,15 @@ defmodule Cryptex.Mac.HmacTest do
     end)
   end
 
+  test "keyed HMAC implementation is equivalent to passing key" do
+    keyed = Hmac.Keyed.new(:sha256, "key")
+    keyed_mac = keyed |> Hmac.Keyed.generate("test")
+    passed_key_mac = Hmac.generate(:sha256, "key", "test")
+
+    assert keyed_mac == passed_key_mac
+    assert Hmac.Keyed.is_authenticated?(keyed, "test", passed_key_mac)
+  end
+
   test "HMAC calculation works with atoms for hasher" do
     assert Hmac.generate(:sha256, "key", "test") == Hmac.generate(Cryptex.Hasher.Algorithm.Sha256, "key", "test")
   end

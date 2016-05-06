@@ -9,25 +9,25 @@ defmodule Cryptex.Mac.Hmac do
   defstruct hasher: nil
   @type t :: %__MODULE__{hasher: Hasher.t}
 
-  @spec new(Hasher.t | Hasher.algorithm) :: Hmac.t
+  @spec new(Hasher.t | Hasher.algorithm) :: t
   def new(%Hasher{} = hasher), do: %Hmac{hasher: hasher}
   def new(module), do: Hasher.new(module) |> new
 
-  @spec generate(Hmac.t | Hasher.t | Hasher.algorithm, binary, Hasher.State.digestable) :: binary
+  @spec generate(t | Hasher.t | Hasher.algorithm, binary, Hasher.State.digestable) :: binary
   def generate(%Hmac{hasher: hasher}, key, data) do
     hmac_inner(hasher, Hasher.block_size(hasher), key, data)
   end
   def generate(module, key, data), do: generate(new(module), key, data)
 
-  @spec is_authenticated?(Hmac.t | Hasher.t | Hasher.algorithm, binary, Hasher.State.digestable, binary) :: boolean
+  @spec is_authenticated?(t | Hasher.t | Hasher.algorithm, binary, Hasher.State.digestable, binary) :: boolean
   def is_authenticated?(hmac_or_hasher, key, data, test) do
     ConstantTime.binaries_equal?(generate(hmac_or_hasher, key, data), test)
   end
 
-  @spec hasher(Hmac.t) :: Hasher.t
+  @spec hasher(t) :: Hasher.t
   def hasher(%Hmac{hasher: hasher}), do: hasher
 
-  @spec digest_size(Hmac.t) :: integer
+  @spec digest_size(t) :: integer
   def digest_size(%Hmac{hasher: hasher}), do: Hasher.digest_size(hasher)
 
   defp hmac_inner(hasher, block_size, key, data) when byte_size(key) > block_size do
